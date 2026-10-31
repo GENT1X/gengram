@@ -22,14 +22,32 @@ jobs:
         run: |
           flutter create --platforms=android --org com.gengram .
           python3 tools/android_patch.py
+      - name: Cache TDLib
+        id: tdcache
+        uses: actions/cache@v4
+        with:
+          path: android/app/src/main/jniLibs
+          key: tdjson-arm64-${{ hashFiles('tools/build_tdlib_android.sh') }}
       - name: Install build tools
+        if: steps.tdcache.outputs.cache-hit != 'true'
         run: sudo apt-get update && sudo apt-get install -y gperf cmake ninja-build
       - name: Build TDLib
+        if: steps.tdcache.outputs.cache-hit != 'true'
         run: bash tools/build_tdlib_android.sh
       - name: Build APK
         run: |
+          set -o pipefail
           flutter pub get
-          flutter build apk --release --target-platform android-arm64
+          flutter build apk --release --target-platform android-arm64 2>&1 | tee build.log
+      - name: Show errors
+        if: failure()
+        run: |
+          grep -n -i -B3 -A15 "what went wrong\|: error\|^error\|Error:" build.log | head -150
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: build-log
+          path: build.log
       - uses: actions/upload-artifact@v4
         with:
           name: GenGram-apk
