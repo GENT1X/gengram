@@ -22,6 +22,8 @@ jobs:
         run: |
           flutter create --platforms=android --org com.gengram .
           python3 tools/android_patch.py
+      - name: Install build tools
+        run: sudo apt-get update && sudo apt-get install -y gperf cmake ninja-build
       - name: Build TDLib
         run: bash tools/build_tdlib_android.sh
       - name: Build APK
